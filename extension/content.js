@@ -66,12 +66,59 @@ window.addEventListener("message", async (event) => {
     }
 });
 
+function parseMarkdownToHTML(text) {
+    const codeBlocks = [];
+
+    // 1. 코드 블록 숨기기 (멀티라인 대응 및 언어 태그 추출)
+    // 패턴: ```(언어)?\n(코드내용)```
+    let html = text.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
+        const index = codeBlocks.length;
+        codeBlocks.push({ lang, code: code.trim() });
+        return `__CODE_BLOCK_${index}__`;
+    });
+
+    // 2. 헤더 파싱 (큰 것부터 파싱하는 것이 안전함)
+    html = html.replace(
+        /^# (.+)$/gm,
+        '<h1 style="margin: 20px 0 10px 0; color: #ff2d92;">$1</h1>',
+    );
+    html = html.replace(
+        /^## (.+)$/gm,
+        '<h2 style="margin: 18px 0 8px 0; color: #ff2d92;">$2</h2>',
+    );
+    html = html.replace(
+        /^### (.+)$/gm,
+        '<h3 style="margin: 15px 0 5px 0; color: #ff2d92;">$3</h3>',
+    );
+
+    // 3. 인라인 코드 변환
+    html = html.replace(
+        /`([^`]+)`/g,
+        '<code style="background-color: #fff0f5; color: #ff2d92; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 13px;">$1</code>',
+    );
+
+    // 4. 코드 블록 복구
+    html = html.replace(/__CODE_BLOCK_(\d+)__/g, (match, index) => {
+        const { lang, code } = codeBlocks[index];
+        // HTML 특수문자 이스케이프 (보안 및 렌더링 오류 방지)
+        const escapedCode = code
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+
+        return `<pre data-lang="${lang}" style="background-color: #f0f0f0; padding: 12px; border-radius: 8px; overflow-x: auto; font-family: monospace; border: 1px solid #e0e0e0; margin: 10px 0;"><code>${escapedCode}</code></pre>`;
+    });
+
+    return html;
+}
+
 let reviewBox = null;
 
 function showReviewUI(text) {
     if (reviewBox) {
         // 이미 패널이 띄워져 있으면 내용만 갈아끼우기
-        document.getElementById("Kanana-review-text").innerText = text;
+        document.getElementById("kanana-review-text").innerHTML =
+            parseMarkdownToHTML(text);
         return;
     }
 
@@ -96,7 +143,7 @@ function showReviewUI(text) {
     // 6. 리뷰 텍스트가 들어갈 본문 영역
     const content = document.createElement("div");
     content.id = "kanana-review-text";
-    content.innerText = text;
+    content.innerHTML = parseMarkdownToHTML(text);
 
     // 이제 이거를 Body에 붙입시다
     reviewBox.appendChild(header);
@@ -106,7 +153,8 @@ function showReviewUI(text) {
 
 function updateReviewUI(text) {
     if (reviewBox) {
-        document.getElementById("kanana-review-text").innerText = text;
+        document.getElementById("kanana-review-text").innerHTML =
+            parseMarkdownToHTML(text);
     } else {
         showReviewUI(text);
     }
