@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
-    "name": "Kanana-o 페어 프로그래밍 봇",
+    "name": "Kanana-o AOJ 코딩 튜터",
     "version": "1.0",
-    "description": "AOJ에서 작성 중인 코드를 분석하고 Kanana-o의 음성 피드백을 제공합니다.",
+    "description": "AOJ에서 작성 중인 코드를 분석하고 Kanana-o의 피드백을 제공합니다.",
 
     "permissions": ["activeTab", "scripting"],
 
@@ -27,5 +27,12 @@
             "resources": ["inject.js"],
             "matches": ["https://aoj.anacnu.kr/*"]
         }
-    ]
+    ],
+
+    "icons": {
+        "16": "icons/aoj_kanana_icon16.png",
+        "32": "icons/aoj_kanana_icon32.png",
+        "48": "icons/aoj_kanana_icon48.png",
+        "128": "icons/aoj_kanana_icon128.png"
+    }
 }
