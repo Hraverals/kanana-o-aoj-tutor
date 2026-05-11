@@ -1,0 +1,30 @@
+{
+    "manifest_version": 3,
+    "name": "Kanana-o 페어 프로그래밍 봇",
+    "version": "1.0",
+    "description": "AOJ에서 작성 중인 코드를 분석하고 Kanana-o의 음성 피드백을 제공합니다.",
+
+    "permissions": ["activeTab", "scripting"],
+
+    "host_permissions": ["https://aoj.anacnu.kr/*"],
+
+    "action": {
+        "default_title": "Kanana-o 분석 요청",
+        "default_popup": "popup.html"
+    },
+
+    "content_scripts": [
+        {
+            "matches": ["https://aoj.anacnu.kr/*"],
+            "js": ["content.js"],
+            "run_at": "document_idle"
+        }
+    ],
+
+    "web_accessible_resources": [
+        {
+            "resources": ["inject.js"],
+            "matches": ["https://aoj.anacnu.kr/*"]
+        }
+    ]
+}
