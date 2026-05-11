@@ -17,6 +17,7 @@
         {
             "matches": ["https://aoj.anacnu.kr/*"],
             "js": ["content.js"],
+            "css": ["content-style.css"],
             "run_at": "document_idle"
         }
     ],
