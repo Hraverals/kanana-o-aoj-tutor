@@ -57,31 +57,9 @@ ${editorCode}
     );
 }
 
-function waitForMonacoAndExtract(maxRetries = 10, intervalMs = 500) {
-    const currentUrl = window.location.href;
-
-    // 문제 페이지에서만 작동하도록 하자
-
-    if (!currentUrl.includes("/problems/")) {
-        console.warn("이곳은 문제 풀이 페이지가 아닙니다! (URL 불일치)");
-        alert("Kanana-o 봇은 '문제 풀이 페이지'에서만 동작합니다!");
-        return; // 즉시 종료
-    }
-
-    let attempts = 0;
-
-    const interval = setInterval(() => {
-        attempts++;
-
-        if (window.monaco && window.monaco.editor.getModels().length > 0) {
-            clearInterval(interval);
-            extractANDSendData();
-        } else if (attempts >= maxRetries) {
-            clearInterval(interval);
-            console.warn("로드 시간 초과함 -> 현재 상태로 강제 추출 시도");
-            extractANDSendData();
-        }
-    }, intervalMs);
+const currentUrl = window.location.href;
+if (!currentUrl.includes("/problems/")) {
+    alert("Kanana-o 봇은 '문제 풀이 페이지'에서만 동작합니다!");
+} else {
+    extractANDSendData();
 }
-
-waitForMonacoAndExtract();
