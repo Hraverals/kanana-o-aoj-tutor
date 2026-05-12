@@ -5,7 +5,6 @@ from openai import OpenAI
 # client 에서는 입력 받아올 endpoint 랑 API key 만 지정해줌
 client = OpenAI(
     base_url="https://kanana-o.a2s-endpoint.kr-central-2.kakaocloud.com/v1",
-    # api_key="KC_IS_dhTHHjin3usBT2X17Fd8kDWsZihmqc8pXt2sypbsruAll3C4LMYfgXv6LpPZZgp5"
     api_key="[ENCRYPTION_KEY]"
 )
 
