@@ -1,11 +1,15 @@
 import base64
 
 from openai import OpenAI
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+KANANA_API_KEY = os.getenv("KANANA_KEY")
 
 client = OpenAI(
     base_url="https://kanana-o.a2s-endpoint.kr-central-2.kakaocloud.com/v1",
-    # api_key=""
-    api_key="[ENCRYPTION_KEY]"
+    api_key=KANANA_API_KEY
 )
 
 def b64_of_file(path: str) -> str:

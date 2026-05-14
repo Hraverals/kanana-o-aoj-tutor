@@ -1,11 +1,16 @@
 import base64
 
 from openai import OpenAI
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+KANANA_API_KEY = os.getenv("KANANA_KEY")
 
 # client 에서는 입력 받아올 endpoint 랑 API key 만 지정해줌
 client = OpenAI(
     base_url="https://kanana-o.a2s-endpoint.kr-central-2.kakaocloud.com/v1",
-    api_key="[ENCRYPTION_KEY]"
+    api_key=KANANA_API_KEY
 )
 
 # 파일을 base64로 변환해서 넘겨줘야함
