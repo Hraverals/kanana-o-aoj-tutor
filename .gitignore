@@ -1,2 +1,6 @@
 __pycache__/
 .env
+result/
+record_audio.py
+resAudioTest.py
+instruction.wav

@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import List, Any, Optional
 
 from openai import AsyncOpenAI
 
@@ -30,28 +31,32 @@ client = AsyncOpenAI(
 )
 
 # JSON 데이터를 파이썬 클래스로 정의합시다
-# 이렇게 해두면 데이터에 'code'라는 글자가 없거나, 숫자가 들어오면 FastAPI가 알아서 에러를 튕겨넴
+
+# 사용자는 카나나에게 텍스트 또는 오디오로 입력을 준다
+# 들어온 오디오는 STT를 사용해 클라이언트에서 텍스트로 저장해두고, 카나나에게는 오디오를 보낸다
+# 들어온 텍스트는 클라이언트에 그대로 저장해두고 카나나에게 텍스트 그대로 보낸다
+# 카나나는 오디오 또는 텍스트로 된 현재의 입력과 텍스트로 된 과거 대화를 대화 맥락에 대한 입력으로 받는다
+# 카나나가 이를 해석하여 오디오와 텍스트로 응답을 준다
+# 클라이언트는 오디오와 텍스트 둘 다로 카나나의 응답을 확인한다.
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
 class AnalyzeRequest(BaseModel):
-    code: str 
-    # 프론트에서 'code'라는 키(Key)에 문자열(str)을 담아 보낼 예정
+    messages: List[ChatMessage]
+
+    audio_b64: Optional[str] = None
+    # 마이크를 쓸 수도 있고, 안 쓸 수도 있음
 
 @app.post("/analyze")
 async def analyze_code(request_data: AnalyzeRequest):
     print("익스텐션으로부터 데이터를 받았습니다. Kanana-o 분석을 시작합니다.")
     
-    """
-    # 테스트를 해보자
-    print("익스텐션으로부터 받은 데이터")
-    print("=" * 50)
-    print(request_data.code)
-    print("=" * 50)
-
-    # json 형식으로 body
-    return {
-        "status": "success", 
-        "message": "서버가 데이터를 성공적으로 수신했습니다."
-    }
-    """
+    kanana_messages = [
+        {"role": msg.role, "content": msg.content}
+        for msg in request_data.messages
+    ]
 
     system_prompt = (
         "너는 충남대 알고리즘 동아리 'ANA'의 스터디원들을 돕는 깐깐하지만 친절한 시니어 개발자 멘토야. "
@@ -65,27 +70,32 @@ async def analyze_code(request_data: AnalyzeRequest):
         "5. 만약 코드를 예시로 보여줘야해서 코드 블록을 작성할 때는 반드시 ```language 형식을 사용하고, 코드 블록 내부에는 HTML 특수 문자(<, > 등)가 포함될 수 있으니 주의해줘. 인라인 코드는 반드시 백틱 한 개로 감싸줘."
     )
 
-    user_prompt = f"다음 문제 정보와 내가 작성한 코드를 보고 리뷰해줘:\n\n{request_data.code}"
+    # user_prompt = f"다음 문제 정보와 내가 작성한 코드를 보고 리뷰해줘:\n\n{request_data.code}"
+    # 첫 대화가 되는 코드 리뷰 요청에 대한 유저 프롬프트는 클라이언트에서 작성할 예정
+
+    kanana_messages.insert(0, {
+        "role": "system", 
+        "content": system_prompt
+    })
+
+    modalities = ["text"]
+
+    if request_data.audio_b64:
+        last_user_message = kanana_messages[-1]
+        
+        original_text = last_user_message["content"]
+        last_user_message["content"] = [
+            {"type": "text", "text": original_text},
+            {"type": "input_audio", "input_audio": {"data": request_data.audio_b64, "format": "wav"}}
+        ]
+        
+        modalities = ["text", "audio"]
 
     try:
-        # 명세서대로 작성해보자
         response = await client.chat.completions.create(
             model="kanana-o",
-            messages=[
-                {
-                    "role": "system",
-                    "content": system_prompt
-                },
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text", 
-                            "text": user_prompt
-                        }
-                    ]
-                }
-            ],
+            messages=kanana_messages,
+            modalities=modalities,
             temperature=0.7
         )
 
