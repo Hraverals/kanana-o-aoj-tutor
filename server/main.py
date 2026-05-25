@@ -1,4 +1,7 @@
 import os
+import base64
+import wave
+import io
 from dotenv import load_dotenv
 
 from fastapi import FastAPI
@@ -29,6 +32,8 @@ client = AsyncOpenAI(
     base_url="https://kanana-o.a2s-endpoint.kr-central-2.kakaocloud.com/v1",
     api_key=KANANA_API_KEY
 )
+
+SAMPLE_RATE = 24000
 
 # JSON 데이터를 파이썬 클래스로 정의합시다
 
@@ -78,40 +83,114 @@ async def analyze_code(request_data: AnalyzeRequest):
         "content": system_prompt
     })
 
-    modalities = ["text"]
-
+    # 오디오 입력이 있으면 멀티모달 요청, 없으면 텍스트만
     if request_data.audio_b64:
         last_user_message = kanana_messages[-1]
-        
         original_text = last_user_message["content"]
         last_user_message["content"] = [
             {"type": "text", "text": original_text},
             {"type": "input_audio", "input_audio": {"data": request_data.audio_b64, "format": "wav"}}
         ]
-        
         modalities = ["text", "audio"]
+    else:
+        modalities = ["text"]
 
     try:
-        response = await client.chat.completions.create(
-            model="kanana-o",
-            messages=kanana_messages,
-            modalities=modalities,
-            temperature=0.7
-        )
+        if request_data.audio_b64:
+            # 오디오 입력 -> 스트리밍으로 호출하여 오디오 청크 수집
+            response = await client.chat.completions.create(
+                model="kanana-o",
+                messages=kanana_messages,
+                modalities=modalities,
+                temperature=0.7,
+                stream=True
+            )
 
-        review_result = response.choices[0].message.content
-        print("분석 완료! 프론트엔드로 결과를 반환합니다.")
-        print(review_result)
+            text_content = ""
+            audio_pcm_chunks = []
 
-        return {
-            "status": "success", 
-            "review": review_result
-        }
-    
+            async for chunk in response:
+                raw = chunk.model_dump()
+                choices = raw.get("choices") or []
+                if not choices:
+                    continue
+                delta = choices[0].get("delta") or {}
+
+                # 텍스트 수집
+                content = delta.get("content")
+                if isinstance(content, str) and content:
+                    if not text_content:
+                        text_content = content
+                    else:
+                        # kanana-o 모델은 delta에 새 토큰이 아닌 누적된 텍스트 전체가 올 수 있음
+                        if len(content) >= len(text_content) and content.startswith(text_content[:10]):
+                            text_content = content
+                        elif text_content.startswith(content):
+                            # 동일한 완성 텍스트가 반복해서 오는 경우 무시
+                            pass
+                        else:
+                            # 만약 일반적인 delta(새 토큰만) 방식이라면
+                            text_content += content
+
+                # 오디오 수집
+                audio = delta.get("audio")
+                if audio is None:
+                    continue
+
+                audio_b64_data = None
+                if isinstance(audio, str):
+                    audio_b64_data = audio
+                elif isinstance(audio, dict):
+                    audio_b64_data = audio.get("data") or audio.get("audio")
+
+                if isinstance(audio_b64_data, str) and audio_b64_data:
+                    pcm = base64.b64decode(audio_b64_data, validate=True)
+                    if pcm:
+                        audio_pcm_chunks.append(pcm)
+
+            # PCM 청크들을 하나의 WAV 파일로 합치기
+            response_audio_b64 = None
+            if audio_pcm_chunks:
+                all_pcm = b"".join(audio_pcm_chunks)
+                wav_buffer = io.BytesIO()
+                with wave.open(wav_buffer, "wb") as wf:
+                    wf.setnchannels(1)
+                    wf.setsampwidth(2)
+                    wf.setframerate(SAMPLE_RATE)
+                    wf.writeframes(all_pcm)
+                response_audio_b64 = base64.b64encode(wav_buffer.getvalue()).decode("utf-8")
+
+            print("분석 완료! (오디오+텍스트) 프론트엔드로 결과를 반환합니다.")
+            print(text_content)
+
+            return {
+                "status": "success",
+                "review": text_content,
+                "audio_b64": response_audio_b64
+            }
+        else:
+            # 텍스트 입력 -> 비스트리밍, 텍스트만 응답
+            response = await client.chat.completions.create(
+                model="kanana-o",
+                messages=kanana_messages,
+                modalities=modalities,
+                temperature=0.7
+            )
+
+            review_result = response.choices[0].message.content
+            print("분석 완료! (텍스트) 프론트엔드로 결과를 반환합니다.")
+            print(review_result)
+
+            return {
+                "status": "success",
+                "review": review_result,
+                "audio_b64": None
+            }
+
     except Exception as e:
         print(f"API 호출 에러: {e}")
         return {
             "status": "error",
-            "message": "AI 분석 중 오류가 발생했습니다."
+            "message": "AI 분석 중 오류가 발생했습니다.",
+            "audio_b64": None
         }
-    
