@@ -53,4 +53,81 @@
     line-height: 1.6;
     color: #333;
     white-space: pre-wrap;
+    flex: 1;
+}
+
+/* 입력 컨테이너 */
+.kanana-input-container {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 12px;
+    border-top: 1px solid #f0e0e8;
+    background-color: #fefefe;
+}
+
+/* 텍스트 입력 */
+#chat-input {
+    flex: 1;
+    border: 1px solid #e0d0d8;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-family: "Pretendard", -apple-system, sans-serif;
+    resize: none;
+    min-height: 36px;
+    max-height: 80px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+#chat-input:focus {
+    border-color: #ff2d92;
+}
+
+/* 마이크 버튼 */
+#mic-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background-color: #4CAF50;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    flex-shrink: 0;
+}
+
+#mic-btn:hover {
+    transform: scale(1.05);
+}
+
+/* 전송 버튼 */
+#send-btn {
+    height: 36px;
+    padding: 0 14px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #ff2d92, #ff705a);
+    color: white;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    flex-shrink: 0;
+}
+
+#send-btn:hover {
+    opacity: 0.9;
+    transform: scale(1.02);
+}
+
+/* 오디오 플레이어 (말풍선 내부) */
+.kanana-audio-player {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    border-radius: 8px;
+    height: 36px;
 }
